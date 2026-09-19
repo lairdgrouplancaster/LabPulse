@@ -4,8 +4,7 @@ This guide takes you from a blank Raspberry Pi to a working LabPulse
 dashboard. You can start with simulated readings or connect real sensors.
 Both use the same configuration and Home Assistant interface.
 
-New to LabPulse? Read [What you're installing](FIRST_STEPS.md#what-youre-installing)
-first. It explains the pieces and the terms used here.
+**Installation** → [Dashboard walkthrough](DASHBOARD_WALKTHROUGH.md) → [First sensor](FIRST_SENSOR.md) → [Configuration](CONFIGURATION.md)
 
 LabPulse installs with pipx and runs its services in Docker containers. You do
 not need a repository checkout or a local container build. For everyday use
@@ -17,6 +16,7 @@ You can leave real sensors, SMS, and the reference sections for later.
 
 ## Contents
 
+- [What you're installing](#what-youre-installing)
 - [Requirements](#requirements)
 - [What needs installing?](#what-needs-installing)
 - [Get onto the Pi](#get-onto-the-pi)
@@ -31,6 +31,32 @@ You can leave real sensors, SMS, and the reference sections for later.
 - [Updating](#updating)
 - [Backups and restoring on a new Pi](#backups-and-restoring-on-a-new-pi)
 - [Troubleshooting](#troubleshooting)
+
+## What you're installing
+
+The **Raspberry Pi** is the small computer that runs LabPulse. It stays on in
+the lab and collects readings. Your laptop or desktop only needs a browser to
+view them; closing that browser doesn't stop monitoring.
+
+**Home Assistant** provides the web pages you use. LabPulse adds the lab's
+readings, graphs, alarm controls, and status pages to it. You don't need to
+build a dashboard yourself.
+
+**Docker** runs the different parts of LabPulse in separate containers. A
+container is a packaged program with the software it needs. **MQTT** carries
+messages between those programs, and **Mosquitto** is the program that passes
+the messages on. You install Docker on the Pi first; `labpulse up` then
+downloads and starts Home Assistant, Mosquitto, and the LabPulse workers.
+
+SMS is optional. Reading the dashboard and recording measurements don't need
+a modem or SIM card.
+
+```mermaid
+flowchart LR
+    A[Real sensors or simulated readings] --> B[Raspberry Pi running LabPulse]
+    B --> C[Home Assistant dashboard in your browser]
+    B --> D[Optional SMS through a modem]
+```
 
 ## Requirements
 
@@ -509,7 +535,7 @@ does not prevent a simulated walkthrough, and its setup is covered by the
 [watchdog guidance](TROUBLESHOOTING.md#host-clock-or-watchdog-warning).
 
 If you're using simulation, continue with
-[Your first look at LabPulse](FIRST_STEPS.md#find-your-way-around). It walks
+[Dashboard walkthrough](DASHBOARD_WALKTHROUGH.md#find-your-way-around). It walks
 through a reading, its history, and a practice alarm. To connect an Arduino,
 use [Connect your first sensor](FIRST_SENSOR.md).
 

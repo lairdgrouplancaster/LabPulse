@@ -1,8 +1,12 @@
-# LabPulse Configuration Reference
+# LabPulse Configuration Guide
 
-This guide explains how to describe a LabPulse installation: its sensors,
-measurements, experiments, dashboards, notifications, and outputs. It begins
-with a small example you can adapt, followed by the available settings.
+[Installation](INSTALLATION.md) → [Dashboard walkthrough](DASHBOARD_WALKTHROUGH.md) → [First sensor](FIRST_SENSOR.md) → **Configuration**
+
+With your first sensor working, this final step helps you describe the rest
+of your installation: its sensors, measurements, experiments, dashboards,
+notifications, and outputs. Start with the YAML basics and small example,
+then follow the settings sections relevant to your equipment. You can return
+to those sections as a reference later.
 
 For installation and operating instructions, use the
 [Installation guide](INSTALLATION.md) and [User Guide](USER_GUIDE.md). The
@@ -122,7 +126,8 @@ then **Enter** to save, and **Ctrl+X** to exit. LabPulse then checks the files t
 it rejects a change, read the file and field it names, correct the mistake,
 and try again.
 
-For a worked example, follow [Connect your first sensor](FIRST_SENSOR.md).
+The [first-sensor walkthrough](FIRST_SENSOR.md) shows these editing steps in
+the context of connecting one Arduino reading.
 
 ## A small complete configuration
 

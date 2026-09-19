@@ -1,41 +1,12 @@
-# Your first look at LabPulse
+# Dashboard walkthrough
 
-LabPulse keeps an eye on the things an experiment depends on: compressed air,
-cooling water, room temperature, power, and similar services. It collects
-readings, puts them on a dashboard, and can warn you when something goes wrong.
+[Installation](INSTALLATION.md) → **Dashboard walkthrough** → [First sensor](FIRST_SENSOR.md) → [Configuration](CONFIGURATION.md)
 
-You can try it without connecting any sensors. Start with simulated readings,
-learn your way around, then connect real hardware when you're ready.
+With LabPulse installed, use this walkthrough to explore the dashboard,
+check a reading, and try an alarm with simulated data. If you haven't installed
+it yet, follow [Installation](INSTALLATION.md) and choose the simulated setup.
 
-## What you're installing
-
-The **Raspberry Pi** is the small computer that runs LabPulse. It stays on in
-the lab and collects readings. Your laptop or desktop only needs a browser to
-view them; closing that browser doesn't stop monitoring.
-
-**Home Assistant** provides the web pages you use. LabPulse adds the lab's
-readings, graphs, alarm controls, and status pages to it. You don't need to
-build a dashboard yourself.
-
-**Docker** runs the different parts of LabPulse in separate containers. A
-container is a packaged program with the software it needs. **MQTT** carries
-messages between those programs, and **Mosquitto** is the program that passes
-the messages on. You install Docker on the Pi first; `labpulse up` then
-downloads and starts Home Assistant, Mosquitto, and the LabPulse workers.
-The [installation guide](INSTALLATION.md#what-needs-installing) covers the
-whole process from blank storage, including the host software you need.
-
-SMS is optional. Reading the dashboard and recording measurements don't need
-a modem or SIM card.
-
-```mermaid
-flowchart LR
-    A[Real sensors or simulated readings] --> B[Raspberry Pi running LabPulse]
-    B --> C[Home Assistant dashboard in your browser]
-    B --> D[Optional SMS through a modem]
-```
-
-### Three words you'll see often
+## Three words you'll see often
 
 Imagine an Arduino connected to a pressure sensor and a temperature sensor:
 
@@ -52,13 +23,11 @@ You'll also see **driver**: the bit of software that knows how to read a
 particular device or message format. You select it in the configuration; most
 users won't need to write one.
 
-## Get the demo running
+## Before you begin
 
-Follow the [Installation guide](INSTALLATION.md), starting with
-[getting onto the Pi](INSTALLATION.md#get-onto-the-pi) if it's new to you.
-Choose **Create a simulated installation**, then complete **Open Home
-Assistant** and **Check the installation**. Come back here when you can see
-the LabPulse dashboard.
+You should have completed Home Assistant onboarding, connected its MQTT
+integration, and checked the simulated installation. Open the **LabPulse**
+dashboard from the Home Assistant sidebar.
 
 Use a new simulated installation for the exercise below. It uses the starter's
 pressure reading and temporarily changes its alarm settings. Keep **Test
@@ -194,5 +163,5 @@ Test mode turns on again whenever Home Assistant starts.
   you'll need wiring or calibration information for your particular equipment.
 - [The User Guide](USER_GUIDE.md) covers everyday use, notification controls,
   backups, and recovery.
-- [The Configuration Reference](CONFIGURATION.md) explains the settings. Start
-  with [a few YAML basics](CONFIGURATION.md#a-few-yaml-basics) if YAML is new to you.
+- After your first sensor, [Configuration](CONFIGURATION.md) completes the
+  first-time path: adapt the examples to describe your own installation.

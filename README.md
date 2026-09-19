@@ -106,9 +106,11 @@ publishing validated measurements.
 
 ## Try it without hardware
 
-New to Raspberry Pi or Home Assistant? Start with
-[Your first look at LabPulse](docs/FIRST_STEPS.md), then follow the installation
-guide. The walkthrough explains the pieces and gives you a practice alarm to try.
+Start with [Installation](docs/INSTALLATION.md), then explore readings and try
+a practice alarm in the [Dashboard walkthrough](docs/DASHBOARD_WALKTHROUGH.md).
+When you're ready for real hardware, follow [Connect your first sensor](docs/FIRST_SENSOR.md).
+Finish with [Configuration](docs/CONFIGURATION.md) to adapt the examples to
+your own installation.
 
 You do not need a finished sensor build to see how LabPulse works. The reference
 setup is a Raspberry Pi 5 running 64-bit Raspberry Pi OS based on Debian 12.

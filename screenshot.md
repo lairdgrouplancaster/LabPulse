@@ -33,25 +33,25 @@ with the image and a short caption when it's ready, then tick the item here.
   File: `docs/images/live-measurement-alarm-editor.png`.
   LabPulse and Home Assistant versions were not supplied; add them when known.
 
-## First Steps screenshots (simulation)
+## Dashboard walkthrough screenshots (simulation)
 
 Capture these on the separate test Pi using fake-hardware mode and the starter
 configuration, so the images match the walkthrough.
 
-- [ ] **[Monitor: find a reading](docs/FIRST_STEPS.md#1-find-a-reading).**
+- [ ] **[Monitor: find a reading](docs/DASHBOARD_WALKTHROUGH.md#1-find-a-reading).**
   Show Compressed Air and its simulated pressure reading. Identify the reading
   to select for history.
-  Suggested filename: `docs/images/first-steps-monitor.png`.
-- [ ] **[System Status: check the service](docs/FIRST_STEPS.md#2-check-the-service).**
+  Suggested filename: `docs/images/dashboard-walkthrough-monitor.png`.
+- [ ] **[System Status: check the service](docs/DASHBOARD_WALKTHROUGH.md#2-check-the-service).**
   Show Compressed Air and Environment Sensor Hub reporting Working, with its
   latest readings. Mark the service name, status, and reading timestamps.
-  Suggested filename: `docs/images/first-steps-system-status.png`.
-- [ ] **[Alarm Setup: make a practice alarm](docs/FIRST_STEPS.md#3-make-a-practice-alarm).**
+  Suggested filename: `docs/images/dashboard-walkthrough-system-status.png`.
+- [ ] **[Alarm Setup: make a practice alarm](docs/DASHBOARD_WALKTHROUGH.md#3-make-a-practice-alarm).**
   Open Configure for Compressed Air, then Configure beside pressure. Show
   Alarm mode, Maximum threshold, Recovery deadband, Required danger,
   Observation window, and Required recovery. Use the practice settings in the
   walkthrough, with notifications muted.
-  Suggested filename: `docs/images/first-steps-alarm-setup.png`.
+  Suggested filename: `docs/images/dashboard-walkthrough-alarm-setup.png`.
 
 ## Contributor screenshots
 
@@ -84,6 +84,23 @@ what is shown; a complete wiring record isn't needed.
   record which revision the photographed assembly uses. CAD is not a substitute
   for this real-hardware photo.
   Suggested filename: `docs/images/hardware-installation.jpg`.
+
+## Explanatory diagrams (not screenshots)
+
+The User Guide also contains editable SVG illustrations. These are drawn
+examples, not captures of an installation, and need no replacement screenshot:
+
+- [Thresholds and recovery deadband](docs/USER_GUIDE.md#thresholds-and-recovery-deadband):
+  [High Only](docs/images/alarm-high-number-line.svg),
+  [Low Only](docs/images/alarm-low-number-line.svg), and
+  [Range](docs/images/alarm-range-number-line.svg) number lines.
+- [Confirmation timing](docs/USER_GUIDE.md#confirmation-timing):
+  [danger percentage over a rolling window](docs/images/alarm-danger-window.svg).
+- [Recovery timing](docs/USER_GUIDE.md#recovery-timing):
+  [continuous recovery and timer reset](docs/images/alarm-recovery-timing.svg).
+
+Keep their boundaries and timing examples aligned with the alarm templates if
+the behaviour changes. Each SVG includes a title and text description.
 
 ## When adding an image
 

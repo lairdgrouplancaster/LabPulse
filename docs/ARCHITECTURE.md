@@ -16,10 +16,13 @@ link to every README under `src/`.
 | Question | Start here |
 |---|---|
 | What runs on the Pi, and how do the programs communicate? | [Runtime topology](#runtime-topology) |
+| How do sensor hubs relate to experiments on the dashboard? | [Services, measurements, and setups](#services-measurements-and-setups) |
 | Which files are safe to edit? | [User-owned and generated state](#user-owned-and-generated-state) |
+| What is kept when a component restarts? | [What survives a restart](#what-survives-a-restart) |
 | How do settings reach the workers and dashboard? | [Configuration flow](#configuration-model-and-flow) and [generation](#deployment-generation) |
 | Where do sensor connection, retries, and faults belong? | [Hardware process](#hardware-process) and [driver contract](#driver-contract) |
 | Who owns alarm and notification decisions? | [Home Assistant](#home-assistant-generation-and-ownership) and [SMS](#sms-process) |
+| How does a reading become an alarm and then recover? | [Alarm lifecycle](#alarm-lifecycle) |
 | Where should I start changing code? | [Package guides](#package-guides), then [a complete reading](#follow-a-complete-reading) |
 
 Here, the **host** is the Pi's operating system outside Docker. A **worker**
@@ -79,6 +82,51 @@ In real-hardware mode, output workers likewise do not share a process. They own 
 subscribe only to their own command topic, publish verified latch state and
 availability, and apply their configured safe state when command authority is
 lost. Fake-hardware mode keeps the same workers but stores state only in memory.
+
+## Services, measurements, and setups
+
+A **service** is one source of readings, such as an Arduino hub, with its own
+worker. Each named reading is a **measurement**. A **setup** groups measurements
+by the experiment or equipment they help monitor, independently of their source.
+
+This illustrative arrangement uses one pump-room Arduino for two experiments:
+
+```mermaid
+flowchart TB
+    hub["Service<br/>Pump-room Arduino"]
+    first["Measurement<br/>Experiment A water temperature"]
+    room["Measurement<br/>Shared room temperature"]
+    second["Measurement<br/>Experiment B water temperature"]
+    setupA["Setup<br/>Experiment A"]
+    setupB["Setup<br/>Experiment B"]
+
+    hub --> first
+    hub --> room
+    hub --> second
+    first --> setupA
+    room --> setupA
+    room --> setupB
+    second --> setupB
+
+    classDef source fill:#e8f1fc,stroke:#4879a8,color:#172c42
+    classDef measurement fill:#e9f4ee,stroke:#50846b,color:#183b2c
+    classDef presentation fill:#fff3df,stroke:#a77b32,color:#49320d
+    class hub source
+    class first,room,second measurement
+    class setupA,setupB presentation
+```
+
+The arrows mean “supplies” and “appears in”. The room temperature has one MQTT
+entity, one history and one set of alarm settings, even though it appears in
+both setups. A setup can also combine measurements from several services.
+Moving a reading between setups changes its presentation; changing its service
+or measurement key changes its [identity](#stable-identity).
+
+In configuration, each measurement's `setups` list selects these groups.
+[`build_template_context()`](../src/labpulse/homeassistant/alarm.py) places the
+same measurement record into each selected setup. A shared reading can still
+notify while any of its setups is unmuted; muting one setup does not silence
+the other experiment's shared reading.
 
 ## Installed host layout
 
@@ -146,6 +194,37 @@ rollback copies in `backups/`, rather than placing timestamped files beside the
 active live files. These local rollback copies are separate from the checksummed
 state archives created by `labpulse backup`.
 
+### What survives a restart
+
+The table describes normal restarts with the existing live directory and saved
+state intact. Docker mounts Home Assistant configuration and history, broker
+data, and SMS state from that directory. Recreating a container reuses those
+files; it does not create a fresh installation.
+
+| State | Owner / storage | After restart |
+|---|---|---|
+| Home Assistant accounts and integrations | Home Assistant, under `homeassistant/config/` | Preserved; existing users log in rather than repeat onboarding |
+| Recorded measurement history | Home Assistant recorder database | Preserved subject to recorder retention; history is not a new live sample |
+| Per-measurement alarm mode, thresholds, deadband and timing settings | Home Assistant helpers with stable entity IDs | Saved settings are restored; generation does not overwrite them |
+| Global, setup, measurement and power mutes | Home Assistant helpers | Saved choices are restored; global mute is enabled on first installation |
+| Test mode | Home Assistant helper with `initial: true` | Turns on whenever Home Assistant starts, even if previously off |
+| Alarm state, incident flags and opening-notification flags | Home Assistant helpers | Saved values are restored; startup automations reconcile incidents with current inputs and use the flags to suppress duplicate delivery |
+| SMS subscriptions and accepted request IDs | `logs/sms_subscriptions.json` and `logs/sms_processed_requests.json` | Reloaded by the SMS worker; the request cache has age and size limits |
+| Pending recipient sends and short event cooldowns | SMS worker memory | Not restored; shutdown attempts to drain sends, but a crash can lose queued work |
+| MQTT requests waiting while the SMS worker is offline | Broker's persistent SMS session | Can be replayed on reconnect; this is separate from the worker's in-memory send queue |
+
+Remembering an SMS request ID means the worker accepted it, not that delivery
+finished. A crash after acceptance can lose an unsent message while the saved
+ID still suppresses its replay. The persistence boundary is implemented in
+[`RecentRequestCache`](../src/labpulse/sms/subscriber.py) and
+[`SmsSender`](../src/labpulse/sms/sender.py).
+
+Home Assistant's [helper definitions](../src/labpulse/homeassistant/templates/alarm/helpers.yaml.j2)
+and [first-install automation](../src/labpulse/homeassistant/templates/alarm/automations/installation.yaml.j2)
+set the restoration policy. Saved timing settings do not mean an in-progress
+automation delay resumes at its old position. Fresh readings and the relevant
+confirmation conditions still need to be established after startup.
+
 ## Command surfaces
 
 LabPulse has one public operator CLI and five package-level process entry
@@ -202,20 +281,77 @@ domain modules do not inspect `sys.argv` or exit the interpreter.
 
 ## Configuration model and flow
 
+### From setup to dashboard
+
+`labpulse setup` prepares the live directory and copies the starter
+`config.yaml` only if a live configuration does not already exist. It then
+generates the deployment from that configuration and any referenced
+`config.d` measurement files.
+
+```mermaid
+flowchart TB
+    config["Your configuration<br/>Services, measurements and setups"]
+    load["Load and validate<br/>Resolve measurement files and defaults<br/>Check settings and references"]
+    templates["LabPulse templates<br/>Dashboard layout and alarm rules"]
+    render["Python generator<br/>Prepare names, IDs and groups<br/>Fill templates for your configuration"]
+    dashboard["Dashboard YAML<br/>Cards, graphs and controls"]
+    logic["Alarm package YAML<br/>Helpers, sensors and automations"]
+    ha["Home Assistant<br/>Displays the dashboard<br/>Runs the rules against live readings"]
+
+    config --> load
+    load --> render
+    templates --> render
+    render --> dashboard
+    render --> logic
+    dashboard -->|"Loaded after labpulse up"| ha
+    logic --> ha
+
+    classDef source fill:#e8f1fc,stroke:#4879a8,color:#172c42
+    classDef generation fill:#e9f4ee,stroke:#50846b,color:#183b2c
+    classDef output fill:#fff3df,stroke:#a77b32,color:#49320d
+    class config,templates source
+    class load,render generation
+    class dashboard,logic,ha output
+```
+
+For example, adding a pressure measurement to the Compressed Air setup gives
+the generator its name, unit, setup membership and stable entity ID. Dashboard
+templates use those details to create its card and controls. If threshold
+alarms are enabled for that measurement, alarm templates create its threshold
+helpers and warning/recovery automations. You choose the actual thresholds
+later in Home Assistant's **Alarm Setup** page.
+
+The generator writes these files beneath `homeassistant/config/`:
+
+| File | What Home Assistant uses it for |
+|---|---|
+| `labpulse-dashboard.yaml` | The LabPulse dashboard layout and controls |
+| `packages/labpulse_generated.yaml` | Alarm settings helpers, calculated state, scripts and automations |
+| `configuration.yaml` | Loads the alarm package and registers the dashboard |
+
+The same setup run also generates `compose.yaml`, the worker configuration,
+and Mosquitto settings. `labpulse up` starts the containers; setup itself only
+prepares files. Sensor workers then publish MQTT discovery and live values,
+which supply the physical sensor entities referenced by the generated dashboard.
+
+There are two template passes. LabPulse fills `[[ ... ]]` and `[% ... %]`
+with configuration details during generation. Home Assistant evaluates the
+remaining `{{ ... }}` and `{% ... %}` expressions against live state later.
+Generating an alarm rule does not evaluate a reading or send an SMS.
+
+The source path is [`load_config()`](../src/labpulse/common/config.py),
+[`build_template_context()`](../src/labpulse/homeassistant/alarm.py), then
+[`generate_homeassistant()`](../src/labpulse/homeassistant/generator.py) and
+the [templates](../src/labpulse/homeassistant/templates/README.md).
+Use `labpulse config` to apply later configuration changes; it regenerates
+the files and applies the updated deployment.
+
 ### Data to follow in the source
 
-There are two paths through this code. During **generation**, settings become
-files. At **runtime**, readings and commands become messages and actions:
-
-```text
-Generation:
-YAML + fragments -> ConfigDocument -> validated settings
-  -> Compose text and HomeAssistantRenderModel -> generated YAML files
-
-Runtime:
-device -> HardwareReadings -> runner -> MQTT -> Home Assistant entity state
-  -> alarm automation -> SmsRequest -> recipient queue -> DeliveryResult
-```
+The [setup diagram](#from-setup-to-dashboard) shows generation: settings become
+files. The [complete reading diagram](#follow-a-complete-reading) shows runtime:
+readings and commands become messages and actions. The main Python objects
+connect those steps as follows.
 
 `ConfigDocument` keeps plain resolved YAML data alongside typed settings;
 the [common guide](../src/labpulse/common/README.md#follow-a-configuration-load)
@@ -250,21 +386,10 @@ The loader returns a `ConfigDocument` containing:
 - driver options already converted to the selected driver's Pydantic model;
 - service measurement defaults already resolved into each measurement.
 
-```text
-config.yaml + referenced config.d measurement mappings
-  |
-  v
-common.config.load_config()
-  |
-  +-- config.resolved.yaml
-  |       |
-  |       +-- deployment generation
-  |       +-- Home Assistant generation
-  |       +-- one hardware process per service
-  |       +-- one output process per enabled output
-  |       +-- SMS worker
-  |       \-- diagnostics
-```
+The loader itself writes nothing. Deployment generation renders the document
+as standalone `config.resolved.yaml` and validates that result before using it
+for Compose and Home Assistant generation. Worker containers load the generated
+runtime file; diagnostics can inspect both the source and generated configuration.
 
 Only physical service measurement mappings may be external. The loader rejects
 general includes, unsafe fragment paths, symlinks, duplicate keys, and services
@@ -286,18 +411,11 @@ Cross-component values are centralized:
 `src/labpulse/deployment/compose.py` renders deterministic Compose text from a
 validated document and driver resource declarations.
 
-`src/labpulse/deployment/generate.py` owns installation of generated output:
-
-```text
-load one ConfigDocument
-  +-- render and independently validate config.resolved.yaml
-  +-- optionally derive and validate config.fake.yaml
-  +-- render Compose in memory
-  \-- render Home Assistant into a staging directory
-          |
-          v
-replace managed live files only after every render succeeds
-```
+`src/labpulse/deployment/generate.py` coordinates the
+[setup flow](#from-setup-to-dashboard). It validates the resolved runtime YAML
+(and the derived fake version when selected), renders Compose in memory, and
+renders Home Assistant files into a temporary staging directory. Only after
+those renders succeed does it install the generated files into the live directory.
 
 A render failure leaves live output unchanged. Installation then replaces each
 file individually; a filesystem failure during replacement can leave a mixed
@@ -529,27 +647,67 @@ setup membership changes only dashboard placement: assigned switches appear in
 their setup Controls cards, while System Status continues to show every enabled
 output.
 
-The notification path is deliberately one-way:
+### Alarm lifecycle
 
-```text
-MQTT facts
-  -> service / reading / alarm classification
-  -> confirmed incident transition
-  -> central dispatcher
-       -> persistent Home Assistant problem (explicit mutes only)
-       -> optional SMS request (explicit mutes)
+For an enabled threshold alarm with a usable reading and no blocking service
+outage, Home Assistant follows this lifecycle. Solid arrows change alarm state;
+dotted arrows ask the shared dispatcher to handle notifications.
+
+```mermaid
+flowchart TB
+    normal["Normal<br/>Observe the reading"]
+    danger["Danger<br/>Alarm confirmed"]
+    recovered["Normal again<br/>Dismiss the problem"]
+    dispatch["Notification dispatcher<br/>Check mutes and opening flags<br/>Send eligible notifications"]
+
+    normal -->|"Danger percentage reached"| danger
+    danger -->|"Recovery time + deadband"| recovered
+    danger -.->|"Opening alert"| dispatch
+    recovered -.->|"Paired recovery"| dispatch
+
+    classDef state fill:#e9f4ee,stroke:#50846b,color:#183b2c
+    classDef alarm fill:#fff3df,stroke:#a77b32,color:#49320d
+    classDef delivery fill:#e8f1fc,stroke:#4879a8,color:#172c42
+    class normal,recovered state
+    class danger alarm
+    class dispatch delivery
 ```
 
-Stable incident and persistent-notification IDs plus restored delivery flags
-prevent duplicates after a Home Assistant restart. Service outages suppress
-their subordinate reading incidents. A recovery always dismisses the matching
-problem, but creates a recovery message only if the opening notification was
-actually created. Recovery SMS is paired with an opening SMS request and obeys
-the current notification mutes and Test mode. Confirmed Home Assistant
-notifications do not depend on the SMS worker. The SMS worker subscribes with a
-persistent MQTT session, so distinct failure and recovery requests queued while
-it is unavailable are replayed in order after reconnect. The request-ID cache
-rejects duplicate QoS 1 deliveries.
+Confirmation uses the percentage of time outside the threshold within the
+observation window, rather than a count of samples. Recovery requires a
+continuous period inside the deadband-adjusted safe range. After recovery,
+observation continues and another confirmed excursion can open a new incident.
+The [measurement automations](../src/labpulse/homeassistant/templates/alarm/automations/measurement_state.yaml.j2)
+own these transitions.
+
+Missing input and service failure have separate incident lifecycles:
+
+| Condition | Confirmation and recovery |
+|---|---|
+| Valid reading outside its threshold | **Danger** after sufficient observed danger; **Normal** after sustained safe readings |
+| One required reading unavailable while its source service is not offline | **No recent data** after its missing-reading delay; closes after usable readings return for its recovery delay |
+| Whole source service offline | One service incident after its outage delay; closes after the service passes its recovery checks |
+
+An unavailable reading does not count as a dangerous number or prove recovery.
+Optional readings do not open missing-data incidents. A service outage
+suppresses subordinate reading incidents, so losing one hub does not generate
+an alert for every sensor on it. These paths live in the
+[missing-reading](../src/labpulse/homeassistant/templates/alarm/automations/measurement_missing_reading.yaml.j2)
+and [service-health](../src/labpulse/homeassistant/templates/alarm/automations/service_health.yaml.j2)
+templates. Power loss uses its own [power automations](../src/labpulse/homeassistant/templates/alarm/automations/power_state.yaml.j2).
+
+The shared [incident scripts](../src/labpulse/homeassistant/templates/alarm/scripts.yaml.j2)
+apply notification policy after a condition has been confirmed. Muting delivery
+does not stop the alarm becoming Danger. Stable notification IDs and saved
+opening flags suppress repeat delivery; an explicit resend can bypass those
+flags, but still obeys mutes.
+
+Recovery dismisses the matching problem even when notifications are muted.
+A recovery notification requires an opening notification, and a recovery SMS
+requires an opening SMS request. Each also obeys current mutes; Test mode selects
+the recipients for the new request. Home Assistant notifications do not depend
+on the SMS worker being online. See [restart persistence](#what-survives-a-restart)
+for the distinction between saved incident state and pending SMS delivery.
 
 ## SMS process
 
@@ -684,26 +842,37 @@ clients.
 
 ## Follow a complete reading
 
+Read from top to bottom. Python collects the facts; Home Assistant decides
+whether they need attention. Mosquitto carries the messages between workers
+and Home Assistant.
+
 ```mermaid
-sequenceDiagram
-    participant Sensor
-    participant Driver
-    participant Runner
-    participant MQTT as Mosquitto
-    participant HA as Home Assistant
-    participant SMS as SMS worker
-    Sensor->>Driver: Raw sample
-    Driver->>Runner: HardwareReadings or classified failure
-    Runner->>MQTT: Discovery if needed, numeric state, then health
-    MQTT->>HA: State and discovery
-    HA->>HA: Expiry, danger history, recovery, mute checks
-    HA->>MQTT: Notification request when eligible
-    MQTT->>SMS: Request
-    SMS->>SMS: Validate, deduplicate, route, queue, deliver
-    SMS->>MQTT: Delivery result
+flowchart TB
+    sensor["Sensor<br/>Produces a sample"]
+    worker["Sensor worker<br/>Driver reads · Runner manages health<br/>Publisher sends readings"]
+    ha["Home Assistant<br/>Shows readings and history<br/>Checks alarms, recovery and mutes"]
+    sms["SMS worker<br/>Checks and queues the request<br/>Sends through the modem, or logs a dry run"]
+
+    sensor --> worker
+    worker -->|"Readings + service health · MQTT"| ha
+    ha -->|"When SMS is allowed · MQTT"| sms
+
+    classDef acquisition fill:#e8f1fc,stroke:#4879a8,color:#172c42
+    classDef decision fill:#e9f4ee,stroke:#50846b,color:#183b2c
+    classDef notification fill:#fff3df,stroke:#a77b32,color:#49320d
+    class sensor,worker acquisition
+    class ha decision
+    class sms notification
 ```
 
-A sample, an alarm transition, an accepted request, and a delivered SMS are
-separate events. Failure at one boundary is not proof of failure at another.
+The sensor worker publishes discovery information so Home Assistant can create
+the entities, then sends numeric values before reporting service health.
+Home Assistant handles missing readings and alarm timing. A confirmed problem
+can create a dashboard notification even if the SMS worker is unavailable.
+
+The SMS worker validates requests, rejects duplicates, chooses recipients, and
+publishes delivery results back through MQTT. An accepted request is not proof
+that a phone received the message; dry-run mode only logs it.
+
 The [package README hierarchy](../src/labpulse/README.md) follows the local code
-ownership and contracts behind this sequence.
+ownership and contracts behind this flow.

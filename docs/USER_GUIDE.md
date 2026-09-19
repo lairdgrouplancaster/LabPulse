@@ -11,7 +11,7 @@ setups, recipients, or other YAML settings, the
 examples.
 
 If you haven't used the dashboard yet, try
-[Your first look at LabPulse](FIRST_STEPS.md). It introduces the main pages and
+[Dashboard walkthrough](DASHBOARD_WALKTHROUGH.md). It introduces the main pages and
 walks through a practice alarm using simulated data.
 
 > [!IMPORTANT]
@@ -283,31 +283,91 @@ Minimum and maximum thresholds use the unit displayed beside the measurement.
 The alarm state is read-only; LabPulse changes it after evaluating the live
 reading and timing settings.
 
+### Thresholds and recovery deadband
+
+The threshold marks where a reading starts contributing **danger time**.
+The recovery deadband moves the boundary for clearing an existing alarm
+further into the accepted range:
+
+- a high alarm recovers at or below `maximum - deadband`;
+- a low alarm recovers at or above `minimum + deadband`;
+- a range alarm requires both conditions.
+
+These number lines show example settings, not recommended equipment limits.
+Red marks the danger zone; green marks where the recovery timer can run.
+The amber **buffer** adds no danger time, but cannot clear an active alarm.
+The colours describe the current value, not the confirmed alarm state.
+
+#### High Only
+
+![High Only number line: danger above 2.0 bar, recovery at or below 1.9 bar, and a 0.1 bar buffer between the boundaries.](images/alarm-high-number-line.svg)
+
+With a maximum of **2.0 bar** and deadband of **0.1 bar**, a value above 2.0
+contributes danger time. Recovery needs **1.9 bar or below** for the full
+recovery period. At 1.99 bar, an existing alarm stays in Danger.
+
+#### Low Only
+
+![Low Only number line: danger below 1.0 bar, recovery at or above 1.1 bar, and a 0.1 bar buffer between the boundaries.](images/alarm-low-number-line.svg)
+
+With a minimum of **1.0 bar** and deadband of **0.1 bar**, a value below 1.0
+contributes danger time. Recovery needs **1.1 bar or above** for the full
+recovery period.
+
+#### Range
+
+![Range number line: danger below 1.0 or above 2.0 bar; recovery from 1.1 to 1.9 bar inclusive, with a 0.1 bar deadband at each end.](images/alarm-range-number-line.svg)
+
+With limits of **1.0–2.0 bar** and deadband of **0.1 bar**, either outer danger
+zone contributes danger time. Recovery needs the reading to stay between
+**1.1 and 1.9 bar, inclusive**. The same deadband applies at both ends.
+If the deadband exceeds half the distance between the limits, no value can
+satisfy both recovery boundaries.
+
+Exactly on a threshold is **not** in the danger zone: the comparisons are
+strictly below or above. Exactly on a recovery boundary **does** count toward
+recovery. With a zero deadband, the recovery boundaries coincide with the
+thresholds.
+
 ### Confirmation timing
 
 LabPulse does not have to alarm on one brief spike. It looks at the recent
 observation window and measures the percentage of time spent in the danger
 zone, using Home Assistant history. It does not count samples.
 
-For example, in a fully observed 120-second window with a required danger
-value of 70%, at least 84 seconds must have been spent outside the threshold
-before the state can change to **Danger**. Home Assistant updates
-the history statistic periodically, so this is not an exact countdown timer.
+![A fully observed 120-second window contains red danger periods of 30, 24 and 30 seconds, separated by two 18-second periods shown in diagonal yellow and green for buffer or recovery zone. Total danger time is 84 seconds, or 70 percent.](images/alarm-danger-window.svg)
 
-Recovery requires the reading to remain safe for the configured recovery time.
-The recovery deadband also moves the safe boundary away from the threshold:
+In this example, **Required danger** is **70%** and **Observation window** is
+**120 seconds**. The three danger periods total **84 seconds**, so the
+percentage reaches the confirmation threshold. They do not need to be
+consecutive. The diagonally split yellow-and-green blocks mean the reading is
+in either the buffer or recovery zone. Both count as time outside danger:
+they stay in the 120-second total but add nothing to the danger time.
 
-- a high alarm recovers at or below `maximum - deadband`;
-- a low alarm recovers at or above `minimum + deadband`;
-- a range alarm requires both conditions.
+The window rolls forward: old periods leave the calculation as new ones enter.
+This diagram assumes a fully observed window with usable readings throughout.
+Home Assistant updates the history statistic periodically, so the change to
+**Danger** is not an exact countdown. The alarm must be enabled, the reading
+available, and no source-service outage blocking it. Recent danger time can
+still confirm an alarm even if the current value has moved outside the danger
+zone; the decision uses the window, not just the latest value.
 
-This prevents repeated alarm and recovery messages when a value sits close to
-the boundary.
+### Recovery timing
 
-For example, a high limit of 2.0 bar with a 0.1 bar deadband needs the reading
-to reach 1.9 bar or below and stay there for the recovery time. Returning to
-1.99 bar is below the alarm limit but isn't enough to clear an active alarm.
-These numbers illustrate the controls; choose limits for your equipment.
+Recovery uses **one continuous period** in the green recovery zone. It does
+not use the danger percentage or add up separate safe periods.
+
+![Recovery example: an active high alarm spends 50 seconds at 1.8 bar, then 30 seconds at 1.95 bar in the buffer, resetting the timer. A new uninterrupted 120 seconds at 1.8 bar clears the alarm at 200 seconds.](images/alarm-recovery-timing.svg)
+
+Here, **Required recovery** is **120 seconds**. The first 50 seconds at 1.8 bar
+are interrupted by 1.95 bar. Although 1.95 is below the high threshold of 2.0,
+it is above the recovery boundary of 1.9, so the timer resets. The reading must
+then spend a fresh, uninterrupted 120 seconds at or below 1.9 before the alarm
+returns to **Normal**.
+
+An unavailable reading also interrupts recovery. The alarm clears through
+this recovery rule, rather than simply when the observed danger percentage
+falls below its threshold. Mutes affect notifications, not these state changes.
 
 ### Bulk alarm editor
 

@@ -90,7 +90,7 @@ Use the same Docker daemon for building and running; if it requires `sudo`,
 use `sudo docker build` in place of `docker build`.
 
 Complete [Home Assistant onboarding](INSTALLATION.md#open-home-assistant), then
-try [the practice alarm](FIRST_STEPS.md#3-make-a-practice-alarm). This development
+try [the practice alarm](DASHBOARD_WALKTHROUGH.md#3-make-a-practice-alarm). This development
 directory starts with the packaged starter, not the small file generated under
 `testing/tmp/`. Use `labpulse --live-dir ~/labpulse-dev-live config` to change it.
 

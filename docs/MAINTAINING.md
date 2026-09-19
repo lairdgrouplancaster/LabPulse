@@ -6,7 +6,7 @@ reading through the code. This guide assumes you know a little Python and Git
 but haven't worked on LabPulse before.
 
 If the product itself is new to you, read
-[What you're installing](FIRST_STEPS.md#what-youre-installing) first. Keep the
+[What you're installing](INSTALLATION.md#what-youre-installing) first. Keep the
 [Development guide](DEVELOPMENT.md) nearby as a reference; you don't need to
 read it all before starting.
 

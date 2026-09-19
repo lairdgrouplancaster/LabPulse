@@ -7,14 +7,14 @@ The hubs sit near the equipment and read its sensors.
 This guide covers sensor parts, firmware pin assignments, and connections.
 For the Pi, UPS, modem, USB hub, and touchscreen enclosure, go to
 [The Raspberry Pi main unit](MAIN_UNIT.md).
-You can also [try LabPulse in simulation](FIRST_STEPS.md) without assembling any
+You can also [try LabPulse in simulation](DASHBOARD_WALKTHROUGH.md) without assembling any
 of this hardware.
 
 ## Choose a starting point
 
 | What you want to do | What's available here | What you still need |
 |---|---|---|
-| Try the dashboard without sensors | [Installation](INSTALLATION.md) and a [guided first session](FIRST_STEPS.md) | A prepared Pi and a browser; no sensor wiring |
+| Try the dashboard without sensors | [Installation](INSTALLATION.md) and a [guided first session](DASHBOARD_WALKTHROUGH.md) | A prepared Pi and a browser; no sensor wiring |
 | Connect an Arduino which already produces readings | Firmware examples, a serial format, and a [first-sensor walkthrough](FIRST_SENSOR.md) | Verified wiring and calibration for that board and its sensors |
 | Build an Arduino sensor hub from parts | [Recorded parts](#sensor-hub-parts) and [firmware pin assignments](#which-sensor-goes-on-which-hub) | A checked circuit, connector wiring, and calibration for the actual sensors |
 | Connect SHT40, DHT11, or X1200 directly to the Pi | Drivers, [configuration examples](CONFIGURATION.md#built-in-drivers), and [main-unit connections](MAIN_UNIT.md#how-the-connections-fit-together) | Check the fitted board revision, wiring, and real readings |

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="340" viewBox="0 0 1000 340" role="img" aria-labelledby="title desc">
+  <title id="title">High Only threshold and recovery boundary</title>
+  <desc id="desc">Danger only above 2.0 bar; recovery at 1.9 bar or below. The amber buffer adds no danger time and cannot clear an active alarm.</desc>
+  <rect width="1000" height="340" rx="12" fill="#ffffff"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+<text x="40" y="38" font-size="26" text-anchor="start" fill="#192f40" font-weight="700">High Only</text>
+<text x="40" y="69" font-size="18" text-anchor="start" fill="#506575" font-weight="400">Example pressure alarm · recovery deadband 0.1 bar</text>
+<text x="310" y="111" font-size="19" text-anchor="middle" fill="#192f40" font-weight="700">Recovery ≤ 1.9 bar</text>
+<line x1="310" y1="120" x2="440" y2="147" stroke="#506575" stroke-width="2"/>
+<line x1="440" y1="149" x2="440" y2="204" stroke="#506575" stroke-width="2" stroke-dasharray="4 4"/>
+<text x="700" y="111" font-size="19" text-anchor="middle" fill="#192f40" font-weight="700">High threshold 2.0 bar</text>
+<line x1="700" y1="120" x2="560" y2="147" stroke="#506575" stroke-width="2"/>
+<line x1="560" y1="149" x2="560" y2="204" stroke="#506575" stroke-width="2" stroke-dasharray="4 4"/>
+<rect x="80" y="156" width="360" height="40" rx="0" fill="#d9f2ee"/>
+<rect x="440" y="156" width="120" height="40" rx="0" fill="#fff0ca"/>
+<rect x="560" y="156" width="360" height="40" rx="0" fill="#fbe3df"/>
+<text x="260" y="182" font-size="18" text-anchor="middle" fill="#192f40" font-weight="700">Recovery zone</text>
+<text x="500" y="182" font-size="18" text-anchor="middle" fill="#192f40" font-weight="700">Buffer</text>
+<text x="740" y="182" font-size="18" text-anchor="middle" fill="#192f40" font-weight="700">Danger zone</text>
+<line x1="80" y1="198" x2="930" y2="198" stroke="#192f40" stroke-width="2"/>
+<path d="M930 198 l-9 -5 v10 z" fill="#192f40"/>
+<line x1="80" y1="198" x2="80" y2="207" stroke="#192f40" stroke-width="2"/>
+<text x="80" y="231" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">1.6</text>
+<line x1="200" y1="198" x2="200" y2="207" stroke="#192f40" stroke-width="2"/>
+<text x="200" y="231" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">1.7</text>
+<line x1="320" y1="198" x2="320" y2="207" stroke="#192f40" stroke-width="2"/>
+<text x="320" y="231" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">1.8</text>
+<line x1="440" y1="198" x2="440" y2="207" stroke="#192f40" stroke-width="2"/>
+<text x="440" y="231" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">1.9</text>
+<line x1="560" y1="198" x2="560" y2="207" stroke="#192f40" stroke-width="2"/>
+<text x="560" y="231" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">2.0</text>
+<line x1="680" y1="198" x2="680" y2="207" stroke="#192f40" stroke-width="2"/>
+<text x="680" y="231" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">2.1</text>
+<line x1="800" y1="198" x2="800" y2="207" stroke="#192f40" stroke-width="2"/>
+<text x="800" y="231" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">2.2</text>
+<line x1="920" y1="198" x2="920" y2="207" stroke="#192f40" stroke-width="2"/>
+<text x="920" y="231" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">2.3</text>
+<text x="946" y="203" font-size="16" text-anchor="start" fill="#192f40" font-weight="400">bar</text>
+<line x1="440" y1="249" x2="440" y2="256" stroke="#192f40" stroke-width="2"/><line x1="440" y1="256" x2="560" y2="256" stroke="#192f40" stroke-width="2"/><line x1="560" y1="249" x2="560" y2="256" stroke="#192f40" stroke-width="2"/><text x="500" y="280" font-size="16" text-anchor="middle" fill="#192f40" font-weight="400">0.1 bar deadband</text>
+<text x="500" y="314" font-size="18" text-anchor="middle" fill="#192f40" font-weight="400">Danger only above 2.0 bar; recovery at 1.9 bar or below.</text>
+  </g>
+</svg>

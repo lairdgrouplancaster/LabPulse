@@ -1,9 +1,11 @@
 # Connect your first sensor
 
+[Installation](INSTALLATION.md) → [Dashboard walkthrough](DASHBOARD_WALKTHROUGH.md) → **First sensor** → [Configuration](CONFIGURATION.md)
+
 This walkthrough connects one Arduino pressure reading to LabPulse. You'll
 identify the board, give LabPulse a small configuration, and check the result
-on the dashboard. Start with [the simulated walkthrough](FIRST_STEPS.md) if you
-haven't used LabPulse before.
+on the dashboard. It follows the [Dashboard walkthrough](DASHBOARD_WALKTHROUGH.md),
+where you explored readings and alarms using simulated data.
 
 Adding support for a different sensor to the open-source project? Follow
 [Contributing sensors](../CONTRIBUTING.md#contributing-sensors) for the firmware,
@@ -174,3 +176,11 @@ Keep a short record with the board: its sensor model, firmware revision, USB
 path, measurement unit, and the reference reading used to check it. You now
 have one identified sensor producing a checked reading; those notes make it
 possible for someone else to replace or troubleshoot it later.
+
+## Next: configure your installation
+
+Continue to [Configuration](CONFIGURATION.md), the final step in the first-time
+path. It builds on the service and measurement you just added, explaining how
+to add more readings, group them into setups, and choose how they appear on
+the dashboard. Start with the YAML basics and small example, then use the
+settings sections as you need them.

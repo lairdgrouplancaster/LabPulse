@@ -14,16 +14,19 @@ describe changes that haven't been released yet.
 
 ## New operator
 
-1. Read [Your first look at LabPulse](FIRST_STEPS.md#what-youre-installing) to
-   understand what runs where and what the dashboard shows.
-2. Follow [Installation](INSTALLATION.md), including getting onto the Pi if
-   it's new to you. Start with simulation; no sensors are needed.
-3. Try [the dashboard and practice alarm](FIRST_STEPS.md#find-your-way-around).
-4. Check [Hardware](HARDWARE.md#choose-a-starting-point), then follow
-   [Connect your first sensor](FIRST_SENSOR.md) when you're ready for an Arduino.
-5. Use the [User Guide](USER_GUIDE.md) for everyday tasks and
-   [Configuration](CONFIGURATION.md) to look up settings. Its
-   [YAML basics](CONFIGURATION.md#a-few-yaml-basics) explain how to edit examples.
+1. Follow [Installation](INSTALLATION.md) from Pi preparation to a working
+   dashboard. Start with simulation; no sensors are needed.
+2. Follow the [Dashboard walkthrough](DASHBOARD_WALKTHROUGH.md) to explore
+   readings, check service health, and try a practice alarm.
+3. Follow [Connect your first sensor](FIRST_SENSOR.md) when you're ready for
+   an Arduino. Check [Hardware](HARDWARE.md#choose-a-starting-point) for wiring
+   and equipment details.
+4. Complete the path with [Configuration](CONFIGURATION.md): work through the
+   YAML basics and small example, then adapt the settings to add readings,
+   group them into setups, and configure your dashboard.
+
+Once you're set up, use the [User Guide](USER_GUIDE.md) for everyday tasks and
+return to Configuration whenever you need to look up a setting.
 
 If something doesn't work, go straight to [Troubleshooting](TROUBLESHOOTING.md).
 
@@ -80,7 +83,7 @@ hardware photos still needed. Keep it updated as the guides change.
 | Subject | Owner |
 |---|---|
 | Project summary, safety and maturity | [Root README](../README.md) |
-| First dashboard visit and practice alarm | [First steps](FIRST_STEPS.md) |
+| First dashboard visit and practice alarm | [Dashboard walkthrough](DASHBOARD_WALKTHROUGH.md) |
 | One Arduino reading from serial output to dashboard | [First sensor](FIRST_SENSOR.md) |
 | Research citation metadata | [Citation file](../CITATION.cff) |
 | Private vulnerability reporting and supported security boundary | [Security policy](../SECURITY.md) |

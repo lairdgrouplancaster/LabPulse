@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="388" viewBox="0 0 1000 388" role="img" aria-labelledby="title desc">
+  <title id="title">Danger time within a rolling observation window</title>
+  <desc id="desc">The last 120 seconds contain danger periods of 30, 24, and 30 seconds. Two 18-second periods are not in danger: diagonally split yellow and green boxes represent either the buffer or recovery zone. Total danger time is 84 seconds, reaching the required 70 percent.</desc>
+  <defs>
+    <pattern id="buffer-or-recovery" width="1" height="1" patternContentUnits="objectBoundingBox">
+      <rect width="1" height="1" fill="#fff0ca"/>
+      <path d="M0 1 L1 0 L1 1 Z" fill="#d9f2ee"/>
+    </pattern>
+  </defs>
+  <rect width="1000" height="388" rx="12" fill="#ffffff"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+<text x="40" y="38" font-size="26" text-anchor="start" fill="#192f40" font-weight="700">How the danger percentage is calculated</text>
+<text x="40" y="69" font-size="18" text-anchor="start" fill="#506575" font-weight="400">Observation window: 120 seconds · Required danger: 70%</text>
+<rect x="80" y="91" width="28" height="18" fill="url(#buffer-or-recovery)"/>
+<text x="118" y="106" font-size="16" fill="#506575">Yellow / green = buffer or recovery zone; neither adds danger time.</text>
+<rect x="80" y="124" width="210" height="64" rx="0" fill="#fbe3df"/>
+<text x="185" y="150" font-size="17" text-anchor="middle" fill="#192f40" font-weight="700">In danger</text>
+<text x="185" y="176" font-size="16" text-anchor="middle" fill="#192f40" font-weight="400">30 s</text>
+<rect x="290" y="124" width="126" height="64" rx="0" fill="url(#buffer-or-recovery)"/>
+<text x="353" y="150" font-size="17" text-anchor="middle" fill="#192f40" font-weight="700">Not in danger</text>
+<text x="353" y="176" font-size="16" text-anchor="middle" fill="#192f40" font-weight="400">18 s</text>
+<rect x="416" y="124" width="168" height="64" rx="0" fill="#fbe3df"/>
+<text x="500" y="150" font-size="17" text-anchor="middle" fill="#192f40" font-weight="700">In danger</text>
+<text x="500" y="176" font-size="16" text-anchor="middle" fill="#192f40" font-weight="400">24 s</text>
+<rect x="584" y="124" width="126" height="64" rx="0" fill="url(#buffer-or-recovery)"/>
+<text x="647" y="150" font-size="17" text-anchor="middle" fill="#192f40" font-weight="700">Not in danger</text>
+<text x="647" y="176" font-size="16" text-anchor="middle" fill="#192f40" font-weight="400">18 s</text>
+<rect x="710" y="124" width="210" height="64" rx="0" fill="#fbe3df"/>
+<text x="815" y="150" font-size="17" text-anchor="middle" fill="#192f40" font-weight="700">In danger</text>
+<text x="815" y="176" font-size="16" text-anchor="middle" fill="#192f40" font-weight="400">30 s</text>
+<line x1="80" y1="188" x2="80" y2="198" stroke="#192f40" stroke-width="2"/>
+<text x="80" y="223" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">−120 s</text>
+<line x1="290" y1="188" x2="290" y2="198" stroke="#192f40" stroke-width="2"/>
+<text x="290" y="223" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">−90 s</text>
+<line x1="416" y1="188" x2="416" y2="198" stroke="#192f40" stroke-width="2"/>
+<text x="416" y="223" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">−72 s</text>
+<line x1="584" y1="188" x2="584" y2="198" stroke="#192f40" stroke-width="2"/>
+<text x="584" y="223" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">−48 s</text>
+<line x1="710" y1="188" x2="710" y2="198" stroke="#192f40" stroke-width="2"/>
+<text x="710" y="223" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">−30 s</text>
+<line x1="920" y1="188" x2="920" y2="198" stroke="#192f40" stroke-width="2"/>
+<text x="920" y="223" font-size="17" text-anchor="middle" fill="#192f40" font-weight="400">Now</text>
+<text x="500" y="280" font-size="22" text-anchor="middle" fill="#192f40" font-weight="700">(30 + 24 + 30) ÷ 120 × 100 = 70%</text>
+<text x="500" y="308" font-size="18" text-anchor="middle" fill="#192f40">84 seconds in danger: the required 70% is reached.</text>
+<text x="500" y="362" font-size="18" text-anchor="middle" fill="#192f40">Add separate danger periods within the window. They need not be consecutive.</text>
+  </g>
+</svg>
