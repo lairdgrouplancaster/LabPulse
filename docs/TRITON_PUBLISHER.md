@@ -693,7 +693,9 @@ Get-ChildItem -Path "C:\Oxford Instruments","D:\Oxford Instruments" -Filter "*.v
 If needed, search `C:\` and `D:\` instead. Use the directory containing the
 newest file that continues changing while Triton runs.
 
-Check the clocks because `Time(secs)` becomes the MQTT Unix timestamp:
+Check the clocks when diagnosing TLS certificate validity or when using
+`timestamp_source: recorded`. The receipt-time configuration below does not
+require the PC's clock to match the Pi for measurement freshness:
 
 ```powershell
 Get-Date
@@ -785,7 +787,7 @@ services:
         topic: labpulse/triton/triton-01/measurements
         heartbeat_topic: labpulse/triton/triton-01/heartbeat
         heartbeat_timeout_seconds: 60
-        maximum_record_age_seconds: 120
+        timestamp_source: received
     measurement_defaults:
       setups: [triton_1]
       alarmed: false
@@ -802,13 +804,28 @@ services:
         topic: labpulse/triton/triton-02/measurements
         heartbeat_topic: labpulse/triton/triton-02/heartbeat
         heartbeat_timeout_seconds: 60
-        maximum_record_age_seconds: 120
+        timestamp_source: received
     measurement_defaults:
       setups: [triton_2]
       alarmed: false
     measurements_file: config.d/triton-02-measurements.yaml
     maximum_measurement_age_seconds: 180
 ```
+
+With `timestamp_source: received`, the 180-second measurement limit runs from
+receipt in Home Assistant. PC clock drift does not reject readings. Repeated
+source timestamps and retained deliveries do not refresh readings; heartbeats
+only report script health. The receiver remembers the last 1024 timestamps
+until its worker restarts. An unseen old record can still appear fresh once,
+including the latest logfile record sent at publisher startup. See the
+[MQTT input contract](CONFIGURATION.md#named-json-over-mqtt) for these limits.
+
+For an existing installation, first install a LabPulse package and matching
+worker image supporting this option. Then use `labpulse config` to add
+`timestamp_source: received` under both Triton services' `driver.options`.
+Existing `maximum_record_age_seconds` entries can be removed; they are unused
+in receipt-time mode. Keep `maximum_measurement_age_seconds` on each service.
+The Windows publisher scripts and MQTT payload format do not need to change.
 
 Open the master and both fragments together so they are validated and applied
 as one candidate bundle:
@@ -1182,8 +1199,12 @@ configured header with the raw JSON and inspect the relevant service log.
 
 ### LabPulse says records are stale or from the future
 
-Compare Windows `Get-Date` with Pi `date`. Confirm `.vcl` `Time(secs)` is
-current. Increase age limits only when the logfile genuinely updates slower.
+In the default `timestamp_source: recorded` mode, compare Windows `Get-Date`
+with Pi `date` and confirm `.vcl` `Time(secs)` is current. For offline PCs,
+use `timestamp_source: received` as shown in section 10 after updating LabPulse
+and its worker image to a version supporting it. This removes source-clock
+checks while Home Assistant still expires readings after the configured
+`maximum_measurement_age_seconds` without a new record.
 
 ### The task works manually but not at startup
 

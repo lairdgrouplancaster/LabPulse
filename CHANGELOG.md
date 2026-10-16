@@ -10,6 +10,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Optional MQTT input `timestamp_source: received` for offline Triton PCs.
+  Home Assistant ages readings from receipt, without rejecting source clock
+  drift. Retained deliveries and repeats of the last 1024 accepted source
+  timestamps do not refresh readings during a worker's lifetime. Existing
+  configurations retain source-clock validation. After updating the package
+  and worker image, enable this option under each Triton's `driver.options`;
+  keep the service's `maximum_measurement_age_seconds` expiry setting.
 - Independent Triton control-PC publisher heartbeats and availability, with
   fridge service alerts driven by script health instead of logfile activity.
 - A per-service `notify_on_service_failure` setting, enabled by default, to

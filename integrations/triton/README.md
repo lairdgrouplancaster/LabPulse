@@ -22,6 +22,13 @@ one named message.
 LabPulse's `labpulse.mqtt_json` driver selects the useful fields by their exact
 Triton header names, so different logfiles may contain different headers.
 
+For offline PCs, configure the Pi driver with `timestamp_source: received`.
+Home Assistant then expires readings from receipt without comparing the PC
+clock with the Pi. The existing scripts and payload work unchanged; source
+timestamps identify records so retries do not refresh readings. See the
+[configuration reference](../../docs/CONFIGURATION.md#named-json-over-mqtt)
+for duplicate history and delayed-record limitations.
+
 Install its MQTT dependency on the Windows Triton computer:
 
 ```powershell

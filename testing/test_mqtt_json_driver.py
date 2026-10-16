@@ -2,8 +2,11 @@
 
 import json
 import time
+from typing import Literal
 from types import SimpleNamespace
 from unittest.mock import patch
+
+import pytest
 
 from labpulse.common.service_config import ServiceConfig
 from labpulse.common.identity import stable_id
@@ -55,7 +58,7 @@ class FakeMqttClient:
         self.loop_started = False
 
 
-def make_driver() -> MqttJsonDriver:
+def make_driver(timestamp_source: Literal["recorded", "received"] = "recorded") -> MqttJsonDriver:
     """Build the standard Triton field-selection driver used by tests."""
 
     service = ServiceConfig.model_validate({
@@ -65,6 +68,7 @@ def make_driver() -> MqttJsonDriver:
             "options": {
                 "topic": "labpulse/triton/measurements",
                 "maximum_record_age_seconds": 30,
+                "timestamp_source": timestamp_source,
             },
         },
         "measurement_defaults": {"setups": ["cryogenics_room"], "alarmed": False},
@@ -416,6 +420,74 @@ def test_driver_subscribes_and_returns_each_snapshot_once() -> None:
     driver.close()
     assert fake_client.disconnected is True
     assert fake_client.loop_started is False
+
+
+@pytest.mark.parametrize("offset", [-3600, 3600])
+def test_received_time_accepts_clock_drift_but_recorded_time_rejects_it(offset: int) -> None:
+    """Opt-in receipt aging works with clocks ahead or behind the receiver."""
+
+    now = 1_700_000_000.0
+    payload = message_payload({"Cold Plate T(K)": 0.09}, recorded_at=now + offset)
+    sources = {"cold_plate_temperature": "Cold Plate T(K)"}
+    with pytest.raises(ValueError, match="seconds old|in the future"):
+        parse_measurement_message(payload, sources, 30, now)
+    readings = parse_measurement_message(payload, sources, 30, now, "received")
+    assert dict(readings.values) == {"cold_plate_temperature": 0.09}
+
+
+@pytest.mark.parametrize("timestamp", [None, True, "bad", float("nan"), float("inf")])
+def test_received_time_still_requires_a_valid_record_identity(timestamp: object) -> None:
+    """Clock independence must not accept malformed source timestamps."""
+
+    message = json.loads(message_payload({"Cold Plate T(K)": 0.09}))
+    message["recorded_at"] = timestamp
+    with pytest.raises(ValueError, match="recorded_at"):
+        parse_measurement_message(
+            json.dumps(message).encode(), {"cold_plate_temperature": "Cold Plate T(K)"},
+            30, time.time(), "received",
+        )
+
+
+def test_received_time_ignores_replays_and_retained_samples_across_reconnects() -> None:
+    """Only new source records refresh HA, even when their numeric values match."""
+
+    driver = make_driver("received")
+    fake_client = FakeMqttClient()
+    first = SimpleNamespace(payload=message_payload({"Cold Plate T(K)": 0.09}, 1000))
+    # A backward PC clock correction must not prevent a new record being accepted.
+    second = SimpleNamespace(payload=message_payload({"Cold Plate T(K)": 0.09}, 900))
+    with patch("labpulse.hardware.drivers.mqtt_json.mqtt.Client", return_value=fake_client):
+        driver.connect()
+        driver._on_message(fake_client, None, SimpleNamespace(payload=first.payload, retain=True))
+        assert driver.read() is None
+        driver._on_message(fake_client, None, first)
+        driver._on_message(fake_client, None, first)
+        assert dict(driver.read().values) == {"cold_plate_temperature": 0.09}
+        driver._on_message(fake_client, None, first)
+        assert driver.read() is None
+        driver._on_message(fake_client, None, second)
+        assert dict(driver.read().values) == {"cold_plate_temperature": 0.09}
+        driver._on_message(fake_client, None, first)
+        assert driver.read() is None
+        driver.close()
+        driver.connect()
+        driver._on_connect(fake_client, None, None, SimpleNamespace(is_failure=False), None)
+        driver._on_message(fake_client, None, second)
+        driver._on_message(fake_client, None, first)
+        assert driver.read() is None
+        driver._on_message(fake_client, None, SimpleNamespace(
+            payload=message_payload({"Cold Plate T(K)": 0.10}, 901),
+        ))
+        assert dict(driver.read().values) == {"cold_plate_temperature": 0.10}
+        driver.close()
+
+
+def test_timestamp_source_configuration_defaults_and_validation() -> None:
+    """Preserve existing installations and reject misspelled clock options."""
+
+    assert MqttJsonConfig(topic="measurements").timestamp_source == "recorded"
+    with pytest.raises(ValueError, match="timestamp_source"):
+        MqttJsonConfig(topic="measurements", timestamp_source="recieved")
 
 
 def test_driver_reports_bad_messages_and_unexpected_disconnects() -> None:

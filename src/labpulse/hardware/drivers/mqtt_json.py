@@ -2,10 +2,11 @@
 
 import json
 import math
+from collections import deque
 from collections.abc import Mapping
 import threading
 import time
-from typing import Any
+from typing import Any, Literal
 
 import paho.mqtt.client as mqtt
 from paho.mqtt import MQTTException
@@ -28,6 +29,7 @@ MQTT_PROTOCOL = "labpulse.measurements"
 MQTT_PROTOCOL_VERSION = 1
 MAXIMUM_MESSAGE_BYTES = 1_000_000
 FUTURE_TIMESTAMP_TOLERANCE_SECONDS = 60
+RECENT_RECORD_LIMIT = 1024
 
 
 # Values accepted under driver.options in config.yaml.
@@ -39,6 +41,7 @@ class MqttJsonConfig(BaseModel):
     broker: str = "mosquitto"
     port: int = Field(default=1883, ge=1, le=65535)
     topic: str
+    timestamp_source: Literal["recorded", "received"] = "recorded"
     maximum_record_age_seconds: int = Field(default=300, ge=2, le=86400)
     heartbeat_topic: str | None = None
     heartbeat_timeout_seconds: int = Field(default=60, ge=2, le=3600)
@@ -127,8 +130,24 @@ def parse_measurement_message(
     measurement_sources: Mapping[str, str],
     maximum_record_age_seconds: int,
     received_at: float,
+    timestamp_source: Literal["recorded", "received"] = "recorded",
 ) -> HardwareReadings:
     """Validate one external JSON message and select configured measurements."""
+
+    _, readings = _parse_measurement_snapshot(
+        payload, measurement_sources, maximum_record_age_seconds, received_at, timestamp_source
+    )
+    return readings
+
+
+def _parse_measurement_snapshot(
+    payload: bytes,
+    measurement_sources: Mapping[str, str],
+    maximum_record_age_seconds: int,
+    received_at: float,
+    timestamp_source: Literal["recorded", "received"],
+) -> tuple[float, HardwareReadings]:
+    """Keep the source record identity alongside validated readings for deduplication."""
 
     if len(payload) > MAXIMUM_MESSAGE_BYTES:
         raise ValueError(f"MQTT JSON message exceeds {MAXIMUM_MESSAGE_BYTES} bytes")
@@ -151,11 +170,12 @@ def parse_measurement_message(
         raise ValueError("recorded_at must be a Unix timestamp")
     if not math.isfinite(recorded_at):
         raise ValueError("recorded_at must be finite")
-    if recorded_at > received_at + FUTURE_TIMESTAMP_TOLERANCE_SECONDS:
-        raise ValueError("recorded_at is in the future")
-    record_age = received_at - recorded_at
-    if record_age > maximum_record_age_seconds:
-        raise ValueError(f"Triton record is {record_age:.1f} seconds old")
+    if timestamp_source == "recorded":
+        if recorded_at > received_at + FUTURE_TIMESTAMP_TOLERANCE_SECONDS:
+            raise ValueError("recorded_at is in the future")
+        record_age = received_at - recorded_at
+        if record_age > maximum_record_age_seconds:
+            raise ValueError(f"Triton record is {record_age:.1f} seconds old")
 
     source_measurements = message.get("measurements")
     if not isinstance(source_measurements, dict):
@@ -177,8 +197,8 @@ def parse_measurement_message(
     if unavailable_headers:
         missing = ", ".join(unavailable_headers)
         issue = HardwareIssue(code="missing_measurements", message=f"Unavailable MQTT measurements: {missing}")
-        return HardwareReadings(selected_measurements, issues=(issue,))
-    return HardwareReadings(selected_measurements)
+        return recorded_at, HardwareReadings(selected_measurements, issues=(issue,))
+    return recorded_at, HardwareReadings(selected_measurements)
 
 
 # The MQTT network loop receives messages on a background thread. The runner
@@ -197,6 +217,7 @@ class MqttJsonDriver(HardwareDriver):
         self.broker = config.broker
         self.port = config.port
         self.topic = config.topic
+        self.timestamp_source = config.timestamp_source
         self.heartbeat_topic = config.heartbeat_topic
         self.availability_topic = config.availability_topic
         self.heartbeat_timeout_seconds = config.heartbeat_timeout_seconds
@@ -217,6 +238,9 @@ class MqttJsonDriver(HardwareDriver):
         self._publisher_availability_known = False
         self._health_connection_started_at: float | None = None
         self._closing = False
+        # Survives broker and driver reconnects, but not a worker restart.
+        # Equality identifies retries without assuming the PC clock runs forward.
+        self._recent_record_times: deque[float] = deque(maxlen=RECENT_RECORD_LIMIT)
 
     def connect(self) -> None:
         """Connect to the broker and subscribe to the configured snapshot topic."""
@@ -375,13 +399,16 @@ class MqttJsonDriver(HardwareDriver):
             return
         if topic != self.topic:
             return
+        if self.timestamp_source == "received" and getattr(message, "retain", False):
+            return
 
         try:
-            readings = parse_measurement_message(
+            recorded_at, readings = _parse_measurement_snapshot(
                 message.payload,
                 self.measurement_sources,
                 self.maximum_record_age_seconds,
                 time.time(),
+                self.timestamp_source,
             )
         except ValueError as error:
             with self._message_lock:
@@ -390,6 +417,10 @@ class MqttJsonDriver(HardwareDriver):
             return
 
         with self._message_lock:
+            if self.timestamp_source == "received":
+                if recorded_at in self._recent_record_times:
+                    return
+                self._recent_record_times.append(recorded_at)
             self._pending_readings = readings
             self._pending_error = None
 

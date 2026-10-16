@@ -798,7 +798,7 @@ services:
         topic: labpulse/triton/triton-01/measurements
         heartbeat_topic: labpulse/triton/triton-01/heartbeat
         heartbeat_timeout_seconds: 60
-        maximum_record_age_seconds: 30
+        timestamp_source: received
     measurement_defaults:
       setups: [cryogenics_room]
     measurements:
@@ -813,7 +813,8 @@ services:
 | `broker` | `mosquitto` | Non-blank hostname |
 | `port` | `1883` | 1 to 65535 |
 | `topic` | required | Exact non-wildcard measurement topic |
-| `maximum_record_age_seconds` | `300` | Accepted source age, 2 to 86400 seconds |
+| `timestamp_source` | `recorded` | `recorded` checks the source clock; `received` ages readings from receipt |
+| `maximum_record_age_seconds` | `300` | Accepted source age in `recorded` mode, 2 to 86400 seconds; unused in `received` mode |
 | `heartbeat_topic` | absent | Optional exact topic ending in `/heartbeat` |
 | `heartbeat_timeout_seconds` | `60` | 2 to 3600 seconds; requires a heartbeat topic |
 
@@ -833,10 +834,31 @@ The publisher sends versioned JSON:
 }
 ```
 
-`recorded_at` is the current Unix timestamp. Messages are limited to 1,000,000
-bytes, must use protocol version 1, may be at most 60 seconds in the future,
-and must contain at least one usable mapped finite number. Missing or invalid
-individual fields create a partial fault while valid fields continue.
+`recorded_at` is the source record's numeric, finite Unix timestamp. Messages
+are limited to 1,000,000 bytes, must use protocol version 1, and must contain
+at least one usable mapped finite number. Missing or invalid individual fields
+create a partial fault while valid fields continue.
+
+The default `timestamp_source: recorded` rejects records more than 60 seconds
+ahead of the Pi or older than `maximum_record_age_seconds`. Existing
+configurations keep this behaviour.
+
+Use `timestamp_source: received` for offline Triton PCs whose clocks may drift.
+LabPulse skips source-clock age checks and forwards each new record to Home
+Assistant. The service's `maximum_measurement_age_seconds` controls Home
+Assistant expiry from receipt; heartbeats do not reset it. `recorded_at` remains
+required as a record identifier: a new sample must have a different timestamp,
+even when its measurement values are unchanged. Backward clock corrections are
+allowed. Retained measurement deliveries and repeats of the last 1024 accepted
+record timestamps are ignored, including across MQTT and driver reconnects.
+This history is in memory and is lost when the worker restarts.
+
+Receipt age does not establish acquisition age. An unseen delayed record, or
+an old logfile record published after a worker restart, can be accepted as
+fresh once. Publishers should send only the newest record when it changes,
+without retaining measurements or replaying a backlog. The supplied Triton
+publishers already send the latest complete record and suppress unchanged
+records during a run; they send the latest record again on publisher startup.
 
 When a heartbeat is configured, LabPulse also derives the sibling
 `/availability` topic. A new, non-retained `alive` heartbeat and retained

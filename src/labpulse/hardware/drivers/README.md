@@ -69,6 +69,14 @@ Paho calls `_on_connect()` to subscribe and `_on_message()` when data arrives.
 then maps external names to configured stable names. One missing field can
 produce a partial `HardwareReadings` with an issue; no usable fields is an error.
 
+`timestamp_source: received` skips source-clock age comparisons, so offline
+publisher clock drift does not reject data. The callback ignores retained
+measurements and duplicates of its last 1024 accepted source timestamps. This
+history survives reconnects but not worker restarts. The source timestamp is
+an identity, not a freshness clock, in this mode. Home Assistant's existing
+receipt-based expiry still applies; see the configuration guide for delayed
+records and restart limitations.
+
 The callback writes one pending sample or error under `_message_lock`. The
 runner calls `read()` on its own thread to take and clear those slots. Newer
 messages replace older pending data: this is a latest-snapshot handoff, not a
